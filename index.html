@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Password manager project done by Gokul.R-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://kit-pro.fontawesome.com/releases/v7.0.0/css/pro.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+    <link rel="stylesheet" href="app.css">
+    <title>Passwords</title>
+    <script>
+        (async function validateSession() {
+            const encryptedData = JSON.parse(localStorage.getItem("encryptedData"));
+            const token = localStorage.getItem("sessionToken");
+            const iv = localStorage.getItem("sessionIV");
+            const created = parseInt(localStorage.getItem("sessionCreated"), 10);
+        
+            function strToArrayBuffer(str) {
+            return new TextEncoder().encode(str);
+        }
+
+        function arrayBufferToStr(buffer) {
+            return new TextDecoder().decode(buffer);
+        }
+
+        function bufferToBase64(buffer) {
+            return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        }
+
+        function base64ToBuffer(base64) {
+            const binary = atob(base64);
+            const buffer = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                buffer[i] = binary.charCodeAt(i);
+            }
+            return buffer;
+        }
+            if (!token || !iv || !encryptedData || !created) {
+
+                window.location.replace("login.html");
+                return;
+            }
+        
+            const THIRTY_MIN = 1000 * 60 * 10;
+            if (Date.now() - created > THIRTY_MIN) {
+                console.warn("Session expired");
+                localStorage.removeItem("sessionCreated");
+                localStorage.removeItem("sessionIV");
+                localStorage.removeItem("sessionToken")
+                window.location.replace("login.html");
+                return;
+            }
+        
+            try {
+                const keyBuffer = base64ToBuffer(encryptedData.keyBase64);
+                const importedKey = await crypto.subtle.importKey(
+                    "raw",
+                    keyBuffer,
+                    { name: "AES-GCM" },
+                    false,
+                    ["decrypt"]
+                );
+        
+                const decryptedToken = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: base64ToBuffer(iv) },
+                    importedKey,
+                    base64ToBuffer(token)
+                );
+        
+
+                console.log("Session validated.");
+        
+            } catch (e) {
+                console.error("Session validation failed:", e);
+                localStorage.removeItem("sessionCreated");
+                localStorage.removeItem("sessionIV");
+                localStorage.removeItem("sessionToken")
+                window.location.replace("login.html");
+            }
+        })();
+        </script>
+        
+</head>
+<body>    
+<div class="appContainer">
+    <div class="sideTab">
+        <div class="settingsBar">
+            <div class="logoutTrigger">
+                <i class="fa-regular fa-arrow-left-to-bracket"></i>
+            </div>
+            <div class="settings">
+                <i class="fa-regular fa-gear"></i>
+            </div>
+
+        </div>
+        <div class="searchBar">
+            <div class="searchWrap">
+                <div class="searchIcon">
+                    <i class="fa-regular fa-magnifying-glass"></i>
+                </div>
+                <div class="searchInput">
+                    <input type="text" placeholder="Search logins..." class="search">
+                </div>
+            </div>
+        </div>
+    
+        <div class="savedLoginsBar">
+            <div class="label">
+                <p>Saved Credentials</p>
+            </div>
+            <div class="savedLogins">
+    
+            </div>
+        </div>
+    
+        <div class="horizontalBreak"></div>
+    
+        <div class="addNewBar">
+            <button class="addNew">Add New</button>
+        </div>
+    
+    </div>
+
+    <div class="mainViewTab">
+        <div id="viewer">
+            <div class="viewLogin">
+                <div class="header">
+
+                    <!--RENDERING STARTS-->
+
+                    
+
+                    <!--RENDERING ENDS-->
+
+                </div>
+                <div id="viewLog" class="displayLoginInfos">
+
+                    <!--RENDERING STARTS-->
+
+
+
+
+                    <!--RENDERING ENDS-->
+                    
+                </div>
+              </div>
+        </div>
+    </div>
+</div>
+
+    <script src="inactive.js"></script>
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+    <script src="ResourceDB.js"></script>
+    <script src="renderer.js"></script>
+    <script src="credsearch.js"></script>
+    <script src="utility_cookie.js"></script>
+    <script src="valueFetcher.js"></script>
+    <script src="gsp.js"></script>
+    <script src="logoutmanager.js"></script>
+
+</body>
+</html>

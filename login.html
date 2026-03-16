@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://kit-pro.fontawesome.com/releases/v7.0.0/css/pro.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@dotlottie/player-component@latest/dist/dotlottie-player.mjs" type="module"></script>
+    <link rel="stylesheet" href="setup.css">
+    <title>Log in</title>
+
+    <script>
+        async function validateSession() {
+            const encryptedData = JSON.parse(localStorage.getItem("encryptedData"));
+            const sessionToken = localStorage.getItem("sessionToken");
+            const sessionIV = localStorage.getItem("sessionIV");
+            const sessionCreated = parseInt(localStorage.getItem("sessionCreated"));
+            if(!encryptedData){
+                window.location.replace("setup.html")
+            }
+    
+            if (!encryptedData || !sessionToken || !sessionIV || !sessionCreated) {
+                return false;
+            }
+    
+            const now = Date.now();
+            const maxSessionAge = 30 * 60 * 1000; 
+            if (now - sessionCreated > maxSessionAge) {
+                return false;
+            }
+    
+            try {
+                const keyBuffer = base64ToBuffer(encryptedData.keyBase64);
+                const iv = base64ToBuffer(sessionIV);
+                const encrypted = base64ToBuffer(sessionToken);
+    
+                const key = await crypto.subtle.importKey(
+                    "raw",
+                    keyBuffer,
+                    { name: "AES-GCM" },
+                    false,
+                    ["decrypt"]
+                );
+    
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv },
+                    key,
+                    encrypted
+                );
+
+                return true;
+            } catch (e) {
+
+                return false;
+            }
+        }
+    
+
+        validateSession().then((isValid) => {
+            if (isValid) {
+                window.location.replace("index.html");
+            }
+        });
+
+        function base64ToBuffer(base64) {
+            const binary = atob(base64);
+            const buffer = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                buffer[i] = binary.charCodeAt(i);
+            }
+            return buffer;
+        }
+
+        
+    </script>
+
+      
+</head>
+<body>
+
+    <div class="zepp">
+        <span class="zlin"></span>
+        <dotlottie-player class="tlo" background="#FFFFFF00" direction="1" id="animation_hand-wave_351224c2-4d61-11ef-aaca-8bfcedf78565" speed="1" mode="normal" src="/res/lotties/petcat.lottie" loop autoplay ></dotlottie-player>
+
+    </div>
+    <div class="xp">
+        <div class="expos">
+            <div class="a">
+                <div class="logo">
+                    <i class="fa-duotone fa-solid fa-user-key"></i>
+                </div>
+                <div class="xtitle">
+                    <p>Enter Master Password</p>
+                </div>
+                <div class="xdesc">
+                    <p></p>
+                </div>
+                <div class="xinp">
+                    <input autocomplete="off" type="text" placeholder="Password" name="" id="psk">
+                </div>
+                <div class="xnext">
+                    <button class="lnextbtn">Next</button>
+                </div>
+    
+    
+            </div>
+            <div class="h">
+                <div class="l"></div>
+            </div>
+            <div class="b">
+                <div class="logo">
+                    <i class="fa-duotone fa-solid fa-lock-a lico"></i>
+                </div>
+                <div class="xtitle xtv">
+                    <p> Code word?</p>
+                </div>
+                <div class="xinp">
+                    <input autocomplete="off" type="text" placeholder="'abracadabra'" name="" id="pasp">
+                </div>
+                <div class="xnext">
+                    <button class="lfnext">Login</button>
+                </div>
+    
+                
+            </div>
+        </div>
+        </div>
+        <script>
+
+            const params = new URLSearchParams(window.location.search);
+            const reason = params.get('reason');
+            zlin = document.querySelector(".zlin")
+            zepp = document.querySelector(".zepp")
+
+            if (reason === 'timeout') {
+                cmsg = "You were gone for a minute. I thought you died."
+    
+                zepp.classList.add("on")
+                zlin.innerHTML = cmsg
+
+              params.delete('reason');
+              const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+              window.history.replaceState({}, '', newUrl);
+            }
+          </script>
+
+    <script>
+
+function strToArrayBuffer(str) { return new TextEncoder().encode(str); }
+function arrayBufferToStr(buffer) { return new TextDecoder().decode(buffer); }
+function bufferToBase64(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))); }
+function base64ToBuffer(base64) {
+    const binary = atob(base64);
+    const buffer = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i);
+    return buffer;
+}
+
+
+function constantTimeEqual(a, b) {
+    if (a.byteLength !== b.byteLength) return false;
+    let diff = 0;
+    const A = new Uint8Array(a);
+    const B = new Uint8Array(b);
+    for (let i = 0; i < A.length; i++) diff |= A[i] ^ B[i];
+    return diff === 0;
+}
+
+async function verifyCredentials(masterPasswordInput, codewordInput) {
+    const encryptedData = JSON.parse(localStorage.getItem("encryptedData"));
+    if (!encryptedData) {
+        return false;
+    }
+
+    let key;
+    try {
+        const keyBuffer = base64ToBuffer(encryptedData.keyBase64);
+        key = await crypto.subtle.importKey(
+            "raw",
+            keyBuffer,
+            { name: "AES-GCM" },
+            false,
+            ["decrypt"]
+        );
+    } catch (e) {
+        console.error("Key import error", e);
+        return false;
+    }
+
+    const iv = base64ToBuffer(encryptedData.iv);
+    const passwordCiphertext = base64ToBuffer(encryptedData.passwordCiphertext);
+    const passphraseCiphertext = base64ToBuffer(encryptedData.passphraseCiphertext);
+
+    try {
+        const decPasswordBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, passwordCiphertext);
+        const decPassphraseBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, passphraseCiphertext);
+
+        const inputPwBuf = strToArrayBuffer(masterPasswordInput);
+        const inputPpBuf = strToArrayBuffer(codewordInput);
+
+        const decPwU8 = new Uint8Array(decPasswordBuf);
+        const decPpU8 = new Uint8Array(decPassphraseBuf);
+
+        const pwMatches = constantTimeEqual(decPwU8, inputPwBuf);
+        const ppMatches = constantTimeEqual(decPpU8, inputPpBuf);
+
+        decPwU8.fill(0);
+        decPpU8.fill(0);
+        inputPwBuf.fill(0);
+        inputPpBuf.fill(0);
+
+        return pwMatches && ppMatches;
+    } catch (e) {
+        console.error("Decryption or verification failed", e);
+        return false;
+    }
+}
+
+document.querySelector(".lnextbtn").addEventListener("click", async () => {
+    const pwv = document.getElementById("psk").value;
+    const ok = await (async () => {
+        const encryptedData = JSON.parse(localStorage.getItem("encryptedData"));
+        if (!encryptedData) return false;
+        try {
+            const keyBuffer = base64ToBuffer(encryptedData.keyBase64);
+            const key = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["decrypt"]);
+            const iv = base64ToBuffer(encryptedData.iv);
+            const passwordCiphertext = base64ToBuffer(encryptedData.passwordCiphertext);
+            const decPasswordBuf = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, passwordCiphertext);
+
+            const decPwU8 = new Uint8Array(decPasswordBuf);
+            const inputPwBuf = strToArrayBuffer(pwv);
+            const pwMatches = constantTimeEqual(decPwU8, inputPwBuf);
+
+            // zero out
+            decPwU8.fill(0);
+            inputPwBuf.fill(0);
+
+            return pwMatches;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
+    })();
+
+    if (ok) {
+        cmsg = "Is it really you?"
+    zepp.classList.add("on")
+    zlin.innerHTML = cmsg
+        document.querySelector(".expos").classList.add("l");
+    } else {
+        cmsg = "Incorrect password. who are you 🔪"
+    zepp.classList.add("on")
+    zlin.innerHTML = cmsg
+    }
+});
+
+document.querySelector(".lfnext").addEventListener("click", async () => {
+    const pwv = document.getElementById("psk").value;
+    const ppv = document.getElementById("pasp").value;
+
+    const ok = await verifyCredentials(pwv, ppv);
+    if (!ok) {
+        cmsg = "Incorrect passphrase. who are you 🔪"
+    
+    zepp.classList.add("on")
+    zlin.innerHTML = cmsg
+        return;
+    }
+
+    const sessionToken = crypto.getRandomValues(new Uint8Array(32)); // 256-bit
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const encryptedData = JSON.parse(localStorage.getItem("encryptedData"));
+    const keyBuffer = base64ToBuffer(encryptedData.keyBase64);
+    const sessionKey = await crypto.subtle.importKey("raw", keyBuffer, { name: "AES-GCM" }, false, ["encrypt"]);
+
+    const encryptedToken = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sessionKey, sessionToken);
+
+    localStorage.setItem("sessionToken", bufferToBase64(encryptedToken));
+    localStorage.setItem("sessionIV", bufferToBase64(iv));
+    localStorage.setItem("sessionCreated", Date.now().toString());
+
+    sessionToken.fill(0);
+
+    window.location.replace("index.html");
+});
+
+
+    </script>
+</body>
+</html>

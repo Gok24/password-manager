@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://kit-pro.fontawesome.com/releases/v7.0.0/css/pro.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="setup.css">
+    <title>Set Up</title>
+</head>
+<body>
+    <div class="xp">
+    <div class="expos">
+        <div class="a">
+            <div class="logo">
+                <i class="fa-duotone fa-solid fa-user-key"></i>
+            </div>
+            <div class="xtitle">
+                <p>Create Master Password</p>
+            </div>
+            <div class="xdesc">
+                <p>This will be your master password</p>
+            </div>
+            <div class="xinp">
+                <input autocomplete="off" type="text" placeholder="Password" name="" id="psk">
+            </div>
+            <div class="xnext">
+                <button class="nextbtn">Next</button>
+            </div>
+
+
+        </div>
+        <div class="h">
+            <div class="l"></div>
+        </div>
+        <div class="b">
+            <div class="logo">
+                <i class="fa-duotone fa-solid fa-lock-a lico"></i>
+            </div>
+            <div class="xtitle">
+                  <p> Create a Code Word</p>
+            </div>
+            <div class="xdesc">
+                <p>something easy to remember</p>
+            </div>
+            <div class="xinp">
+                <input autocomplete="off" type="text" placeholder="'abracadabra'" name="" id="pasp">
+            </div>
+            <div class="xnext">
+                <button class="fnext">Next</button>
+            </div>
+
+            
+        </div>
+    </div>
+    </div>
+
+    <script>
+
+window.onload = function() {
+    if (!localStorage.getItem("encryptedData")) {
+    }else if(localStorage.getItem("sessionToken")){
+        window.location.replace("index.html");
+    }
+    
+    else {
+        console.log("Encrypted data found!");
+        window.location.replace("login.html");
+    }
+};
+
+
+
+
+
+        psk = document.getElementById("psk")
+        n = document.querySelector(".nextbtn")
+        b = document.querySelector(".expos")
+        f = document.querySelector(".fnext")
+        pasp = document.getElementById("pasp")
+
+
+
+function strToArrayBuffer(str) {
+    return new TextEncoder().encode(str);
+}
+
+function arrayBufferToStr(buffer) {
+    return new TextDecoder().decode(buffer);
+}
+
+function bufferToBase64(buffer) {
+    return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+}
+
+function base64ToBuffer(base64) {
+    const binary = atob(base64);
+    const buffer = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        buffer[i] = binary.charCodeAt(i);
+    }
+    return buffer;
+}
+
+async function generateRandomKey() {
+    return await crypto.subtle.generateKey(
+        {
+            name: "AES-GCM",
+            length: 256
+        },
+        true,
+        ["encrypt", "decrypt"]
+    );
+}
+
+async function encryptAndStore(password, passphrase) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const key = await generateRandomKey();
+
+    const encryptedPassword = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        strToArrayBuffer(password)
+    );
+
+    const encryptedPassphrase = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        strToArrayBuffer(passphrase)
+    );
+
+    const exportedKey = await crypto.subtle.exportKey("raw", key);
+    const keyBase64 = bufferToBase64(exportedKey);
+
+    const encryptedData = {
+        iv: bufferToBase64(iv),
+        passwordCiphertext: bufferToBase64(encryptedPassword),
+        passphraseCiphertext: bufferToBase64(encryptedPassphrase),
+        keyBase64
+    };
+
+    localStorage.setItem("encryptedData", JSON.stringify(encryptedData));
+    console.log("Password and passphrase encrypted and stored.");
+}
+
+async function decryptFromStorage() {
+    const encryptedData = JSON.parse(localStorage.getItem("encryptedData"));
+    if (!encryptedData) {
+        throw new Error("No encrypted data found.");
+    }
+
+    const iv = base64ToBuffer(encryptedData.iv);
+    const passwordCiphertext = base64ToBuffer(encryptedData.passwordCiphertext);
+    const passphraseCiphertext = base64ToBuffer(encryptedData.passphraseCiphertext);
+    const keyBase64 = encryptedData.keyBase64;
+
+    const keyBuffer = base64ToBuffer(keyBase64);
+    const key = await crypto.subtle.importKey(
+        "raw",
+        keyBuffer,
+        { name: "AES-GCM" },
+        false,
+        ["decrypt"]
+    );
+
+    try {
+        const decryptedPassword = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv },
+            key,
+            passwordCiphertext
+        );
+        
+        const decryptedPassphrase = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv },
+            key,
+            passphraseCiphertext
+        );
+
+        return {
+            password: arrayBufferToStr(decryptedPassword),
+            passphrase: arrayBufferToStr(decryptedPassphrase)
+        };
+    } catch (e) {
+        throw new Error("Decryption failed. Invalid key or data.");
+    }
+}
+
+
+
+
+
+        n.onclick = function(){
+            pask = psk.value
+            wh = validateStrongPassword(pask)
+            if(wh=="valid"){
+                b.classList.add("l")
+            }
+            else{
+                alert(wh)
+            }
+            
+        }
+        f.onclick = function(){
+            paspv = pasp.value
+            pask = psk.value
+            whm = validateStrongPassword(pask)
+            whx = validatePassphrase(paspv)
+            if(whx=="valid" && whm=="valid"){
+                alert("Setup done! login now")
+                window.location.replace("login.html");
+                encryptAndStore(pask,paspv);
+            }
+            else if(whm!="valid"){
+                b.classList.remove("l")
+            }
+            else{
+                alert(whx)
+            }
+
+        }
+
+    function validateStrongPassword(password) {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/;
+    const hasLowerCase = /[a-z]/;
+    const hasNumber = /\d/;
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/;
+    if (password.length < minLength) {
+        return "Password must be at least 8 characters long.";
+    }
+    if (!hasUpperCase.test(password)) {
+        return "Password must contain at least one uppercase letter.";
+    }
+    if (!hasLowerCase.test(password)) {
+        return "Password must contain at least one lowercase letter.";
+    }
+    if (!hasNumber.test(password)) {
+        return "Password must contain at least one number.";
+    }
+    if (!hasSpecialChar.test(password)) {
+        return "Password must contain at least one special character.";
+    }
+    return "valid";
+}
+function validatePassphrase(passphrase) {
+    if (passphrase.length < 4) {
+        return "Passphrase must be at least 4 characters long.";
+    }
+    if (passphrase.length > 18) {
+        return "Passphrase must not exceed 18 characters.";
+    }
+    const validPassphrasePattern = /^[a-z]+$/;
+    if (!validPassphrasePattern.test(passphrase)) {
+        return "Passphrase can only contain lowercase letters (no numbers, symbols, dots, or hyphens).";
+    }
+    return "valid";
+}
+
+    </script>
+</body>
+</html>
